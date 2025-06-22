@@ -25,6 +25,9 @@ public:
     // Forward rate between d1 and d2 (act/365)
     double fwd(const date_t& d1, const date_t& d2) const;
 
+    // Helper to get double from date
+    static double to_double(const date_t& d);
+
 private:
     std::vector<date_t> node_dates_;
     std::vector<double> discount_factors_;

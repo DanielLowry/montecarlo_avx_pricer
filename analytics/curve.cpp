@@ -18,6 +18,11 @@ namespace
     }
 }
 
+double discount_curve::to_double(const date_t& d)
+{
+    return sys_date_to_double(d);
+}
+
 double discount_curve::df(const date_t& d) const
 {
     if (d <= node_dates_.front()) 

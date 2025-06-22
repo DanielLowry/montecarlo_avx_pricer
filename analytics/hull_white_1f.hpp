@@ -34,16 +34,18 @@ public:
 	double a() const { return a_; }
 	double sigma() const { return sigma_; }
 
-	// evolve method to help simulate monte carlo paths
-	double evolve(date_t ti
-		double ri,
-		double dt
-	) const;
+
 
 private:
 
 	std::shared_ptr<const discount_curve> curve_;
 	double a_, sigma_;
 
-	static double to_year_frac(date_t d);
+	// evolve method to help simulate monte carlo paths
+	double evolve(
+        date_t ti,
+		double ri,
+		double dt
+	) const;
+
 };
