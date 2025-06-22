@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
+// Very simple discount curve class - not vectorised for now!
 class discount_curve {
 public:
 

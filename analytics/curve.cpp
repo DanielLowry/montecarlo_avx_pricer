@@ -1,4 +1,4 @@
-#include "discount_curve.hpp"
+#include "curve.hpp"
 
 discount_curve::discount_curve(std::vector<date_t> node_dates, std::vector<double> discount_factors)
     : node_dates_(std::move(node_dates)), discount_factors_(std::move(discount_factors))
