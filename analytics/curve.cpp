@@ -8,6 +8,9 @@ discount_curve::discount_curve(std::vector<date_t> node_dates, std::vector<doubl
     
     if (!std::is_sorted(node_dates_.begin(), node_dates_.end())) 
         throw std::invalid_argument("Node dates must be sorted in ascending order.");    
+
+    if(discount_factors_.front() != 1.0)
+        throw std::invalid_argument("First discount factor must be 1.0.");
 }
 
 namespace

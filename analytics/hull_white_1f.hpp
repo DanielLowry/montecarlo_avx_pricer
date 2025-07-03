@@ -34,6 +34,21 @@ public:
 	double a() const { return a_; }
 	double sigma() const { return sigma_; }
 
+	double price_cap_monte_carlo(
+		date_t start_date,
+		date_t end_date,
+		double strike,
+		double notional,
+		int num_paths
+	) const;
+
+	double price_cap_black(
+		date_t start_date,
+		date_t end_date,
+		double strike,
+		double notional
+	) const;
+
 
 
 private:

@@ -16,6 +16,8 @@ public:
 
     discount_curve(std::vector<date_t> node_dates, std::vector<double> discount_factors);
 
+    date_t valuation_date() const { return node_dates_.front(); }
+
     // Get discount factor for a given date (linear interpolation)
     double df(const date_t& d) const;
 
