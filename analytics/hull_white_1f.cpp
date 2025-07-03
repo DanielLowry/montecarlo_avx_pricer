@@ -120,5 +120,6 @@ double hull_white_1f::evolve(
     double theta = dfwd_dt + a_ * curve_->fwd(ti, ti + epsilon) + sigma_ * sigma_ / (2.0 * a_) * (1.0 - std::exp(-2.0 * a_ * discount_curve::to_double(ti)));
 
     // Standard 1F hull white
-    return ri + (theta - a_ * ri) * dt + sigma_ * std::sqrt(dt) * random_normal();
+    double rn = random_normal();
+    return ri + (theta - a_ * ri) * dt + sigma_ * std::sqrt(dt) * rn;
 }
