@@ -6,14 +6,14 @@
 #include <algorithm>
 #include <cmath>
 
+
+// chrono::sys_days is a new type in C++20 that represents a date
+// It is not time-aware, so can only be queried on a date
+using date_t = std::chrono::sys_days;
+
 // Very simple discount curve class - not vectorised for now!
 class discount_curve {
 public:
-
-    // chrono::sys_days is a new type in C++20 that represents a date
-    // It is not time-aware, so can only be queried on a date
-    using date_t = std::chrono::sys_days;
-
     discount_curve(std::vector<date_t> node_dates, std::vector<double> discount_factors);
 
     date_t valuation_date() const { return node_dates_.front(); }

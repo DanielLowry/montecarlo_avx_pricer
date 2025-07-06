@@ -12,7 +12,7 @@
 
 class hull_white_1f {
    public:
-    using date_t = discount_curve::date_t;
+    // Remove using date_t = discount_curve::date_t; and use global date_t
 
     // If you already know the vol, you can construct the model directly
     // Otherwise, you can calibrate the model from a discount curve and vol
@@ -44,10 +44,10 @@ class hull_white_1f {
 
 // For now - trivial function which requires ALL inputs to price using
 // monte carlo.  These are the entry points for pybind11
-double price_cap_monte_carlo(discount_curve::date_t start_date, discount_curve::date_t end_date, double strike, double notional,
-                             int num_paths, double a, std::vector<double> curve_node_dates,
+double price_cap_monte_carlo(date_t start_date, date_t end_date, double strike, double notional,
+                             int num_paths, double a, double sigma, std::vector<double> curve_node_dates,
                              std::vector<double> curve_node_values);
 
-double price_cap_monte_carlo(discount_curve::date_t start_date, discount_curve::date_t end_date, double strike, double notional,
-                             int num_paths, double a, std::vector<double> curve_node_dates,
+double price_cap_black(date_t start_date, date_t end_date, double strike, double notional,
+                             int num_paths, double a, double sigma, std::vector<double> curve_node_dates,
                              std::vector<double> curve_node_values);

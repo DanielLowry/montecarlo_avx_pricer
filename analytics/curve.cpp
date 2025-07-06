@@ -15,7 +15,7 @@ discount_curve::discount_curve(std::vector<date_t> node_dates, std::vector<doubl
 
 namespace
 {
-    double sys_date_to_double(const discount_curve::date_t& d)
+    double sys_date_to_double(const date_t& d)
     {
         return std::chrono::duration_cast<std::chrono::days>(d.time_since_epoch()).count();
     }
