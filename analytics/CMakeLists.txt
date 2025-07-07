@@ -26,4 +26,12 @@ find_package(pybind11
 pybind11_add_module(py_pricer MODULE
     pybindings/pricer.cpp
 )
+set_target_properties(py_pricer PROPERTIES 
+SUFFIX ".so"
+OUTPUT_NAME "py_pricer"
+)   
 target_include_directories(py_pricer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+install(TARGETS py_pricer
+        LIBRARY 
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
