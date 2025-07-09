@@ -3,7 +3,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(mc_pricer, m) {
+PYBIND11_MODULE(mc_pricer_py, m) {
     m.doc() = "Monte Carlo pricer for an interest rate cap";
 
     m.def("price", &price_cap_monte_carlo,

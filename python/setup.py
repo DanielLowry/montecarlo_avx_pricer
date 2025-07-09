@@ -2,11 +2,10 @@
 from skbuild import setup
 
 setup(
-    name="mc_pricer",
+    name="mc_pricer_py",
     version="0.1.0",
-    packages=["py_pricer"],
-    include_package_data=True,
-    package_data={"py_pricer" : ["py_pricer.so"]},
+    packages=["mc_pricer_py"],         
+    package_dir={"mc_pricer_py": "mc_pricer_py"},  
     cmake_source_dir="../analytics",
     cmake_args=["-DCMAKE_BUILD_TYPE=Release"],
     python_requires=">=3.7",

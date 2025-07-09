@@ -5,6 +5,7 @@ project(montecarlo_avx LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(mc_pricer STATIC curve.cpp simple_vol_surface.cpp hull_white_1f.cpp)
 target_include_directories(mc_pricer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -23,15 +24,22 @@ find_package(pybind11
     REQUIRED
 )
 
-pybind11_add_module(py_pricer MODULE
+pybind11_add_module(mc_pricer_py MODULE
     pybindings/pricer.cpp
 )
-set_target_properties(py_pricer PROPERTIES 
+set_target_properties(mc_pricer_py PROPERTIES 
 SUFFIX ".so"
-OUTPUT_NAME "py_pricer"
+OUTPUT_NAME "mc_pricer_py"
 )   
-target_include_directories(py_pricer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-install(TARGETS py_pricer
-        LIBRARY 
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
+target_include_directories(mc_pricer_py PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(mc_pricer_py PRIVATE mc_pricer)
+
+install(TARGETS mc_pricer_py
+        LIBRARY
+        DESTINATION mc_pricer_py)
+
+install(
+  FILES ${CMAKE_SOURCE_DIR}/../python/mpp_init/__init__.py
+  DESTINATION mc_pricer_py
+)

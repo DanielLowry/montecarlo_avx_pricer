@@ -1,2 +1,4 @@
 venv/
 _skbuild/
+dist/
+*.egg-info/
