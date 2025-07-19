@@ -13,12 +13,12 @@ target_include_directories(mc_pricer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # set up relative path to python venv
 set(PYTHON_VENV_DIR "${CMAKE_SOURCE_DIR}/../python/venv")
 
-# The venv doesn't have the cmake headers, so we use the system python
 find_package(Python3 
     COMPONENTS Interpreter Development 
     REQUIRED
 )
 
+# If it fails to find pybind11 configs, you need to install them: sudo apt install python3-pybind11
 find_package(pybind11
     CONFIG
     REQUIRED

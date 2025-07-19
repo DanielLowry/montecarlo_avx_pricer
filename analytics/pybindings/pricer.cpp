@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "hull_white_1f.hpp" 
 
 namespace py = pybind11;
