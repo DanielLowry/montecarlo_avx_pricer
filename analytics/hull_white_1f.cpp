@@ -16,7 +16,7 @@ inline double random_normal() {
 }
 
 inline double operator-(date_t lhs, date_t rhs) {
-    return discount_curve::to_double(lhs) - discount_curve::to_double(rhs);
+    return date_to_double(lhs) - date_to_double(rhs);
 }
 
 inline date_t operator+(date_t t, double dt) { return t + dt; }
@@ -89,41 +89,13 @@ double hull_white_1f::evolve(date_t ti,        // Current time
         (curve_->fwd(ti + epsilon, ti + 2 * epsilon) - curve_->fwd(ti, ti + epsilon)) / epsilon;
     double theta =
         dfwd_dt + a_ * curve_->fwd(ti, ti + epsilon) +
-        sigma_ * sigma_ / (2.0 * a_) * (1.0 - std::exp(-2.0 * a_ * discount_curve::to_double(ti)));
+        sigma_ * sigma_ / (2.0 * a_) * (1.0 - std::exp(-2.0 * a_ * date_to_double(ti)));
 
     // Standard 1F hull white
     double rn = random_normal();
     return ri + (theta - a_ * ri) * dt + sigma_ * std::sqrt(dt) * rn;
 }
 
-std::vector<date_t> double_to_date_vector(const std::vector<double>& double_dates) {
-    std::vector<date_t> date_vector;
-    date_vector.reserve(double_dates.size());
-    
-    for (const auto& d : double_dates) {
-        // Convert double (days since epoch) to date_t
-        date_vector.emplace_back(std::chrono::sys_days{std::chrono::days{static_cast<int>(d)}});
-    }
-    
-    return date_vector;
-}
 
 
-double price_cap_monte_carlo(date_t start_date, date_t end_date, double strike, double notional,
-                             int num_paths, double a, double sigma,
-                             std::vector<double> curve_node_dates,
-                             std::vector<double> curve_node_values) {
-    std::shared_ptr<discount_curve> curve =
-        std::make_shared<discount_curve>(double_to_date_vector(curve_node_dates), curve_node_values);
-    hull_white_1f pricer(curve, a, sigma);
-    return pricer.price_cap_monte_carlo(start_date, end_date, strike, notional, num_paths);
-}
 
-double price_cap_black(date_t start_date, date_t end_date, double strike, double notional,
-                       int num_paths, double a, double sigma, std::vector<double> curve_node_dates,
-                       std::vector<double> curve_node_values) {
-    std::shared_ptr<discount_curve> curve =
-        std::make_shared<discount_curve>(double_to_date_vector(curve_node_dates), curve_node_values);
-    hull_white_1f pricer(curve, a, sigma);
-    return pricer.price_cap_black(start_date, end_date, strike, notional);
-}

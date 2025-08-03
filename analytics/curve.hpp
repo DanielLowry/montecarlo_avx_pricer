@@ -1,15 +1,11 @@
 #pragma once
 
 #include <vector>
-#include <chrono>
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
 
-
-// chrono::sys_days is a new type in C++20 that represents a date
-// It is not time-aware, so can only be queried on a date
-using date_t = std::chrono::sys_days;
+#include "date.hpp"
 
 // Very simple discount curve class - not vectorised for now!
 class discount_curve {
@@ -27,8 +23,6 @@ public:
     // Forward rate between d1 and d2 (act/365)
     double fwd(const date_t& d1, const date_t& d2) const;
 
-    // Helper to get double from date
-    static double to_double(const date_t& d);
 
 private:
     std::vector<date_t> node_dates_;

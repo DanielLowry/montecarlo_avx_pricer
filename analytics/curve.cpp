@@ -13,18 +13,7 @@ discount_curve::discount_curve(std::vector<date_t> node_dates, std::vector<doubl
         throw std::invalid_argument("First discount factor must be 1.0.");
 }
 
-namespace
-{
-    double sys_date_to_double(const date_t& d)
-    {
-        return std::chrono::duration_cast<std::chrono::days>(d.time_since_epoch()).count();
-    }
-}
 
-double discount_curve::to_double(const date_t& d)
-{
-    return sys_date_to_double(d);
-}
 
 double discount_curve::df(const date_t& d) const
 {
@@ -40,9 +29,9 @@ double discount_curve::df(const date_t& d) const
     const auto& d0 = node_dates_[idx];
     const auto& d1 = node_dates_[idx + 1];
 
-    double t0 = sys_date_to_double(d0);
-    double t1 = sys_date_to_double(d1);
-    double t = sys_date_to_double(d);
+    double t0 = date_to_double(d0);
+    double t1 = date_to_double(d1);
+    double t = date_to_double(d);
 
     double w = (t - t0) / (t1 - t0);
     double v0 = discount_factors_[idx];

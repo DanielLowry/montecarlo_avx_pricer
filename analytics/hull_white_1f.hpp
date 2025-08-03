@@ -42,12 +42,5 @@ class hull_white_1f {
     double evolve(date_t ti, double ri, double dt) const;
 };
 
-// For now - trivial function which requires ALL inputs to price using
-// monte carlo.  These are the entry points for pybind11
-double price_cap_monte_carlo(date_t start_date, date_t end_date, double strike, double notional,
-                             int num_paths, double a, double sigma, std::vector<double> curve_node_dates,
-                             std::vector<double> curve_node_values);
 
-double price_cap_black(date_t start_date, date_t end_date, double strike, double notional,
-                             int num_paths, double a, double sigma, std::vector<double> curve_node_dates,
-                             std::vector<double> curve_node_values);
+                             
