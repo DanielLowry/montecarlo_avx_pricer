@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(mc_pricer STATIC curve.cpp simple_vol_surface.cpp hull_white_1f.cpp)
+add_library(mc_pricer STATIC curve.cpp simple_vol_surface.cpp hull_white_1f.cpp date.cpp)
 target_include_directories(mc_pricer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # set up relative path to python venv
