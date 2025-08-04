@@ -32,29 +32,6 @@ inline date_t operator-(date_t t, double dt) { return t + (-dt); }
 
 }  // namespace
 
-double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date, double strike,
-                                            double notional, int num_paths) const {
-    double dcf = (end_date - start_date) / 365.0;  // start date only needed to calculate the DCF
-    double df = curve_->df(end_date);
-
-    date_t val_date = curve_->valuation_date();
-    if (end_date <= val_date) throw std::runtime_error("end_date must be after valuation_date");
-
-    size_t num_steps = end_date - val_date;
-
-    double sum_payoffs = 0.0;
-    for (int i = 0; i < num_paths; ++i) {
-        // Run the monte carlo simulation
-        double r = curve_->fwd(val_date, val_date + (end_date - start_date));
-        for (size_t j = 0; j < num_steps; ++j) r = evolve(val_date + j, r, 1);
-
-        // Caplet payoff
-        sum_payoffs += std::max(r - strike, 0.0);
-    }
-
-    return df * notional * sum_payoffs / num_paths;
-}
-
 double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double strike,
                                       double notional) const {
     // Simple Black-Scholes formula for an IR caplet
@@ -79,6 +56,31 @@ double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double
 
     double caplet_price = df * notional * T * (fwd * norm_cdf(d1) - strike * norm_cdf(d2));
     return caplet_price;
+}
+
+double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date, double strike,
+                                            double notional, int num_paths) const {
+    double dcf = (end_date - start_date) / 365.0;  // start date only needed to calculate the DCF
+    double df = curve_->df(end_date);
+
+    date_t val_date = curve_->valuation_date();
+    if (end_date <= val_date)
+        throw std::runtime_error("end_date must be after valuation_date");
+
+    size_t num_steps = end_date - val_date;
+
+    double sum_payoffs = 0.0;
+    for (int i = 0; i < num_paths; ++i) {
+        // Run the monte carlo simulation
+        double r = curve_->fwd(val_date, val_date + (end_date - start_date));
+        for (size_t j = 0; j < num_steps; ++j)
+            r = evolve(val_date + j, r, 1/365);
+
+        // Caplet payoff
+        sum_payoffs += std::max(r - strike, 0.0);
+    }
+
+    return df * notional * sum_payoffs / num_paths;
 }
 
 double hull_white_1f::evolve(date_t ti,        // Current time
