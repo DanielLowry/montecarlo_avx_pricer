@@ -34,6 +34,8 @@ class hull_white_1f {
     double price_cap_black(date_t start_date, date_t end_date, double strike,
                            double notional) const;
 
+    static double black_vol_to_hw_vol(double black_vol, double a, double dcf, double T);
+
    private:
     std::shared_ptr<const discount_curve> curve_;
     double a_, sigma_;

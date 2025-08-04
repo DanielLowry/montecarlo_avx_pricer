@@ -49,8 +49,8 @@ double discount_curve::fwd_df(const date_t& d1, const date_t& d2) const
 
 double discount_curve::fwd(const date_t& d1, const date_t& d2) const
 {
-    LOG("Calculating forward rate for " << date_to_string(d1) << " to " 
-        << date_to_string(d2));
+    // LOG("Calculating forward rate for " << date_to_string(d1) << " to " 
+    //     << date_to_string(d2));
 
     double df1 = df(d1);
     double df2 = df(d2);

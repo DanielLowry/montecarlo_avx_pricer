@@ -107,5 +107,8 @@ double hull_white_1f::evolve(date_t ti,        // Current time
 }
 
 
-
+double hull_white_1f::black_vol_to_hw_vol(double black_vol, double a, double dcf, double T) {
+    return black_vol * std::sqrt((2 * a * T) / (1 - std::exp(-2 * a * T))) * (a * dcf) /
+           (1 - std::exp(-a * dcf));
+}
 
