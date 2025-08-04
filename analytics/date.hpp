@@ -9,4 +9,6 @@ date_t date_from_int(int dt);
 // Helper to get double from date
 double date_to_double(const date_t& d);
 
+std::string date_to_string(const date_t& d);
+
 std::vector<date_t> double_to_date_vector(const std::vector<double>& double_dates);

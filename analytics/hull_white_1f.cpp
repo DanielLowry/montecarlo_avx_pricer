@@ -1,5 +1,6 @@
 
 #include "hull_white_1f.hpp"
+#include "logging.hpp"
 
 #include <random>
 
@@ -19,7 +20,10 @@ inline double operator-(date_t lhs, date_t rhs) {
     return date_to_double(lhs) - date_to_double(rhs);
 }
 
-inline date_t operator+(date_t t, double dt) { return t + dt; }
+inline date_t operator+(date_t t, double dt) {
+    // Add dt days to t
+    return t + std::chrono::days(static_cast<int>(dt));
+}
 
 inline date_t operator+(double dt, date_t t) { return t + dt; }
 
@@ -29,19 +33,23 @@ inline date_t operator-(date_t t, double dt) { return t + (-dt); }
 
 double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date, double strike,
                                             double notional, int num_paths) const {
+
+
     double dcf = (end_date - start_date) / 365.0;  // start date only needed to calculate the DCF
     double df = curve_->df(end_date);
 
     date_t val_date = curve_->valuation_date();
+    if (end_date <= val_date) 
+        throw std::runtime_error("end_date must be after valuation_date");    
+
+    size_t num_steps = end_date - val_date;
 
     double sum_payoffs = 0.0;
     for (int i = 0; i < num_paths; ++i) {
-        // For now we just assume daily time steps
-        size_t num_steps = end_date - val_date;
-
         // Run the monte carlo simulation
         double r = curve_->fwd(val_date, val_date + (end_date - start_date));
-        for (size_t j = 0; j < num_steps; ++j) r = evolve(val_date + i, r, 1);
+        for (size_t j = 0; j < num_steps; ++j) 
+            r = evolve(val_date + j, r, 1);
 
         // Caplet payoff
         sum_payoffs += std::max(r - strike, 0.0);
@@ -52,6 +60,8 @@ double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date, 
 
 double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double strike,
                                       double notional) const {
+
+
     // Simple Black-Scholes formula for an IR caplet
     double fwd = curve_->fwd(start_date, end_date);
 
@@ -84,7 +94,7 @@ double hull_white_1f::evolve(date_t ti,        // Current time
     // It's a reasonably complicated derivation, which leads to the following formula:
     // theta(t) = dfwd(0,t)/dt + a * fwd(0,t) + sigma^2 / (2 * a) * (1 - exp(-2 * a * t))
     // We calculate dfwd(0,t)/dt by finite difference
-    constexpr double epsilon = 1e-4;  // for finite difference
+    constexpr double epsilon = 1;  // for finite difference 
     double dfwd_dt =
         (curve_->fwd(ti + epsilon, ti + 2 * epsilon) - curve_->fwd(ti, ti + epsilon)) / epsilon;
     double theta =

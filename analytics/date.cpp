@@ -17,6 +17,11 @@ double date_to_double(const date_t& d) {
     return sys_date_to_double(d);
 }
 
+std::string date_to_string(const date_t& d)
+{
+    return std::to_string(date_to_double(d));
+}
+
 std::vector<date_t> double_to_date_vector(const std::vector<double>& double_dates)
 {
     std::vector<date_t> date_vector;
