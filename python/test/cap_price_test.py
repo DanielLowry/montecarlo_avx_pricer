@@ -4,15 +4,15 @@ from mc_pricer_py import price_cap_mc, price_cap_black
 class TestCapPricing(unittest.TestCase):
     def setUp(self):
         # Use serial integer dates
-        self.start_date = 1
-        self.end_date = 10
+        self.start_date = 1 # in days
+        self.end_date =365 # in days
         self.strike = 0.02
         self.notional = 1000000
         self.num_paths = 10000
         self.a = 0.01
-        self.sigma = 0.01
-        self.curve_node_dates = [1, 10]
-        self.curve_node_values = [1.0, 0.999]
+        self.sigma = 0.01 # black vol
+        self.curve_node_dates = [1, 365]
+        self.curve_node_values = [1.0, 0.98]
 
     def test_price_cap_mc(self):
         result = price_cap_mc(
