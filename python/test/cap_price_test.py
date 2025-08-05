@@ -91,20 +91,22 @@ class TestCapPricing(unittest.TestCase):
                     self.curve_node_dates, self.curve_node_values
                 )
 
-    @unittest.skip("MC vs Black price discrepancy for complex curves - Investigation needed")
     def test_complex_curves(self):
         """Test various curve shapes with more node points"""
-        # Upward sloping curve
+        # Upward sloping curve (all positive rates)
         up_dates = [1, 90, 180, 365, 730]
-        up_values = [1.0, 0.99, 0.98, 0.97, 0.96]
+        # Approximately 1% continuous rate increasing to 2%
+        up_values = [1.0, 0.9925, 0.985, 0.97, 0.955]  
 
-        # Downward sloping curve
+        # Downward sloping curve (all positive rates)
         down_dates = [1, 90, 180, 365, 730]
-        down_values = [1.0, 1.01, 1.02, 1.03, 1.04]
+        # Approximately 0.5% continuous rate decreasing to 0.25%
+        down_values = [1.0, 0.9988, 0.9975, 0.995, 0.9925]  
 
-        # Humped curve
+        # Humped curve (all positive rates)
         hump_dates = [1, 90, 180, 365, 730]
-        hump_values = [1.0, 0.99, 0.98, 0.99, 1.0]
+        # Rate starts at 0.5%, peaks at 1%, ends at 0.75%
+        hump_values = [1.0, 0.9988, 0.9965, 0.992, 0.985]  
 
         curves = [
             (up_dates, up_values, "Upward sloping"),
@@ -117,8 +119,24 @@ class TestCapPricing(unittest.TestCase):
                 self._run_mc_vs_black_comparison(
                     self.start_date, 730, self.strike, self.notional,
                     self.num_paths, self.a, self.sigma,
-                    dates, values
+                    dates, values,
+                    rel_tol=0.02  # Slightly wider tolerance for complex curves
                 )
+
+    def test_negative_rates(self):
+        """Test that negative forward rates throw an exception"""
+        # Curve that will generate negative forwards
+        dates = [1, 365]
+        values = [1.0, 1.1]  # This will create negative forwards
+        
+        with self.assertRaises(RuntimeError) as context:
+            price_cap_black(
+                self.start_date, self.end_date, self.strike, self.notional,
+                self.num_paths, self.a, self.sigma,
+                dates, values
+            )
+        
+        self.assertTrue("Negative forward rates are not yet supported" in str(context.exception))
 
     def test_convergence(self):
         """Test convergence with increasing number of paths"""

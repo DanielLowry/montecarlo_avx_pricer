@@ -37,6 +37,11 @@ double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double
     // Simple Black-Scholes formula for an IR caplet
     double fwd = curve_->fwd(start_date, end_date);
 
+    // We don't yet handle negative rates
+    if (fwd <= 0.0) {
+        throw std::runtime_error("Negative forward rates are not yet supported");
+    }
+
     double df = curve_->df(end_date);
 
     double T = (end_date - start_date) / 365.0;
