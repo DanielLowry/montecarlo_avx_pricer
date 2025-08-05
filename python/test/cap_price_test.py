@@ -10,7 +10,7 @@ class TestCapPricing(unittest.TestCase):
         self.strike = 0.02
         self.notional = 1000000
         self.num_paths = 5000  # Reduced from 10000
-        self.a = 0.01
+        self.a = 0.008
         self.sigma = 0.01  # black vol
         self.curve_node_dates = [1, 500]
         self.curve_node_values = [1.0, 0.98]
@@ -140,29 +140,63 @@ class TestCapPricing(unittest.TestCase):
 
     def test_convergence(self):
         """Test convergence with increasing number of paths"""
-        path_counts = [1000, 2000, 3000, 5000]  # Reduced maximum paths
+        path_counts = [100, 250, 500, 1000]  # Reduced path counts for faster testing
         results = []
+        rel_errors = []  # Track relative errors vs Black price
+        
+        # Use a curve with meaningful forward rates and a middle point
+        test_dates = [1, 365, 730]  # 1Y and 2Y points
+        test_values = [1.0, 0.98, 0.96]  # Approximately 2% continuous rate, consistent across curve
+        
+        # Use parameters that will generate meaningful option prices with more volatility
+        test_strike = 0.02  # At-the-money strike (close to forward rate)
+        test_sigma = 0.02   # Higher volatility to create more variance
+        
+        # First calculate the Black price (our target)
+        black_price = price_cap_black(
+            self.start_date, self.end_date, test_strike, self.notional,
+            self.num_paths, self.a, test_sigma,
+            test_dates, test_values
+        )
+
+        print(f"\nBlack price: {black_price}")  # Print reference price for debugging
 
         for num_paths in path_counts:
             with self.subTest(f"Number of paths: {num_paths}"):
-                mc_price, black_price = self._run_mc_vs_black_comparison(
-                    self.start_date, self.end_date, self.strike, self.notional,
-                    num_paths, self.a, self.sigma,
-                    self.curve_node_dates, self.curve_node_values,
+                mc_price, _ = self._run_mc_vs_black_comparison(
+                    self.start_date, self.end_date, test_strike, self.notional,
+                    num_paths, self.a, test_sigma,
+                    test_dates, test_values,
                     rel_tol=0.05  # Wider tolerance for lower path counts
                 )
                 results.append(mc_price)
-
-        # Check that variance decreases with more paths
+                
+                # Calculate relative error vs Black price
+                rel_error = abs(mc_price - black_price) / abs(black_price)
+                rel_errors.append(rel_error)
+                
+                print(f"Paths: {num_paths}, MC price: {mc_price}, Rel error: {rel_error}")  # Debug output
+        
+        # Check that variance between MC runs decreases
         variances = []
         for i in range(len(path_counts)-1):
-            variance = abs(results[i] - results[i+1]) / max(abs(results[i]), 1e-10)
+            variance = abs(results[i] - results[i+1]) / abs(results[i])
             variances.append(variance)
+            print(f"Variance between {path_counts[i]} and {path_counts[i+1]} paths: {variance}")  # Debug output
         
-        # Verify decreasing variance
+        # Verify decreasing variance between MC runs
         for i in range(len(variances)-1):
             self.assertGreaterEqual(variances[i], variances[i+1],
-                                  "Variance should decrease with more paths")
+                                  "Variance between consecutive MC runs should decrease with more paths")
+        
+        # Verify convergence to Black price
+        for i in range(len(rel_errors)-1):
+            self.assertGreaterEqual(rel_errors[i], rel_errors[i+1],
+                                  "Relative error vs Black price should decrease with more paths")
+            
+        # Check final convergence is within reasonable bounds
+        self.assertLess(rel_errors[-1], 0.05,  # 5% relative error for reduced paths
+                       f"Final MC price ({results[-1]}) should be within 5% of Black price ({black_price})")
 
     def test_strike_sensitivity(self):
         """Test different strike rates"""
