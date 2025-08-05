@@ -54,7 +54,6 @@ class TestCapPricing(unittest.TestCase):
             self.curve_node_dates, self.curve_node_values
         )
 
-    @unittest.skip("MC vs Black price discrepancy for short time horizons - Investigation needed")
     def test_time_horizons(self):
         """Test different time horizons"""
         horizons = [
@@ -147,7 +146,6 @@ class TestCapPricing(unittest.TestCase):
             self.assertGreaterEqual(variances[i], variances[i+1],
                                   "Variance should decrease with more paths")
 
-    @unittest.skip("MC vs Black price discrepancy for different strikes - Investigation needed")
     def test_strike_sensitivity(self):
         """Test different strike rates"""
         strikes = [0.01, 0.02, 0.03, 0.04, 0.05]

@@ -80,7 +80,7 @@ double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date, 
         sum_payoffs += std::max(r - strike, 0.0);
     }
 
-    return df * notional * sum_payoffs / num_paths;
+    return df * dcf * notional * sum_payoffs / num_paths;
 }
 
 double hull_white_1f::evolve(date_t ti,        // Current time
