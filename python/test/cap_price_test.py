@@ -9,9 +9,9 @@ class TestCapPricing(unittest.TestCase):
         self.end_date = 500  # in days
         self.strike = 0.02
         self.notional = 1000000
-        self.num_paths = 5000  # Reduced from 10000
+        self.num_paths = 1000
         self.a = 0.008
-        self.sigma = 0.01  # black vol
+        self.sigma = 0.02  # black vol
         self.curve_node_dates = [1, 500]
         self.curve_node_values = [1.0, 0.98]
 
@@ -119,8 +119,7 @@ class TestCapPricing(unittest.TestCase):
                 self._run_mc_vs_black_comparison(
                     self.start_date, 730, self.strike, self.notional,
                     self.num_paths, self.a, self.sigma,
-                    dates, values,
-                    rel_tol=0.02  # Slightly wider tolerance for complex curves
+                    dates, values
                 )
 
     def test_negative_rates(self):
