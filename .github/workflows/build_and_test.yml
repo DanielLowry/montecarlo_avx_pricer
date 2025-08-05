@@ -1,0 +1,46 @@
+name: Build and Test Monte Carlo Pricer
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+
+    - name: Create virtual environment
+      run: |
+        python -m venv python/venv
+
+    - name: Install Python dependencies
+      run: |
+        source python/venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install scikit-build
+        pip install pytest
+
+    - name: Build and install package
+      run: |
+        cd python
+        chmod +x build_and_install.sh
+        ./build_and_install.sh OFF
+
+    - name: Run tests
+      run: |
+        cd python
+        pytest test/cap_price_test.py -v 
