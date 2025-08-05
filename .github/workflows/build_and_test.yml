@@ -21,18 +21,18 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-         sudo apt-get install -y cmake build-essential pybind11-dev python3-pybind11
+        sudo apt-get install -y cmake build-essential pybind11-dev python3-pybind11
 
     - name: Create virtual environment
       run: |
         python -m venv python/venv
 
-    - name: Install Python dependencies
+    - name: Install build dependencies
       run: |
         source python/venv/bin/activate
         python -m pip install --upgrade pip
-        pip install scikit-build
-        pip install pybind11
+        # Install build dependencies from requirements
+        pip install -r python/reqs.txt
 
     - name: Build and install package
       run: |
