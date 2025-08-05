@@ -44,4 +44,4 @@ jobs:
       run: |
         source python/venv/bin/activate
         cd python
-        python -m unittest test/cap_price_test.py -v 
+        PYTHONPATH=. python -m unittest test.cap_price_test -v 
