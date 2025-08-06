@@ -78,7 +78,7 @@ double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date,
     if (end_date <= val_date)
         throw std::runtime_error("end_date must be after valuation_date");
 
-    size_t num_steps = end_date - val_date;
+    size_t num_steps = start_date - val_date;
     double initial_rate = curve_->fwd(val_date, val_date + (end_date - start_date));
     LOG("MC pricing: initial_rate=" << initial_rate);
 
@@ -111,12 +111,14 @@ double hull_white_1f::evolve(date_t ti,        // Current time
     // We set theta to be such that the model fits the discount curve
     // It's a reasonably complicated derivation, which leads to the following formula:
     // theta(t) = dfwd(0,t)/dt + a * fwd(0,t) + sigma^2 / (2 * a) * (1 - exp(-2 * a * t))
-    // We calculate dfwd(0,t)/dt by finite difference
-    constexpr double epsilon = 1;  // for finite difference
-    double dfwd_dt =
-        (curve_->fwd(ti + epsilon, ti + 2 * epsilon) - curve_->fwd(ti, ti + epsilon)) /
-        epsilon;
-    double theta = dfwd_dt + a_ * curve_->fwd(ti, ti + epsilon) +
+
+    constexpr int epsilon_days = 1;
+    constexpr double epsilon = epsilon_days / 365.0;
+    double f0 = curve_->inst_fwd(ti); 
+    double f1 = curve_->inst_fwd(ti+epsilon_days);
+    double dfwd_dt = (f1 - f0) / epsilon;
+
+    double theta = dfwd_dt + a_ * curve_->inst_fwd(ti) +
                    sigma_ * sigma_ / (2.0 * a_) *
                        (1.0 - std::exp(-2.0 * a_ * date_to_double(ti) / 365.0));
 

@@ -34,13 +34,25 @@ jobs:
         # Install build dependencies from requirements
         pip install -r python/reqs.txt
 
+    - name: Build C++ library and tests
+      run: |
+        cd analytics
+        mkdir -p build && cd build
+        cmake .. -DENABLE_TESTING=ON
+        cmake --build .
+
+    - name: Run C++ tests
+      run: |
+        cd analytics/build
+        ./test_curve
+
     - name: Build and install package
       run: |
         cd python
         chmod +x build_and_install.sh
         ./build_and_install.sh OFF
 
-    - name: Run tests
+    - name: Run Python tests
       run: |
         source python/venv/bin/activate
         cd python

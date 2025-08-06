@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 project(montecarlo_avx LANGUAGES CXX)
 
 option(ENABLE_LOGGING "Enable logging output" OFF)
+option(ENABLE_TESTING "Enable test builds" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,6 +12,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(mc_pricer STATIC curve.cpp simple_vol_surface.cpp hull_white_1f.cpp date.cpp)
 target_include_directories(mc_pricer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(ENABLE_TESTING)
+    enable_testing()
+    add_executable(test_curve test_curve.cpp)
+    target_link_libraries(test_curve PRIVATE mc_pricer)
+    add_test(NAME test_curve COMMAND test_curve)
+endif()
 
 # set up relative path to python venv
 set(PYTHON_VENV_DIR "${CMAKE_SOURCE_DIR}/../python/venv")

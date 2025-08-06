@@ -66,3 +66,55 @@ double discount_curve::fwd(const date_t& d1, const date_t& d2) const
     double dcf = days / 365.0;
     return (df1 / df2 - 1.0) / dcf;
 }
+
+double discount_curve::df(const double d) const
+{
+    // Interpolate discount factor for a time expressed as double (days since epoch)
+    double t = d;
+
+    // Get node times as doubles
+    double t_first = date_to_double(node_dates_.front());
+    double t_last = date_to_double(node_dates_.back());
+
+    if (t <= t_first)
+        return discount_factors_.front();
+
+    if (t >= t_last)
+        return discount_factors_.back();
+
+    // Find the interval [t0, t1] such that t0 <= t < t1
+    // Linear search is fine for small number of nodes
+    size_t idx = 0;
+    for (size_t i = 0; i < node_dates_.size() - 1; ++i) {
+        double t0 = date_to_double(node_dates_[i]);
+        double t1 = date_to_double(node_dates_[i + 1]);
+        if (t >= t0 && t < t1) {
+            idx = i;
+            break;
+        }
+    }
+
+    double t0 = date_to_double(node_dates_[idx]);
+    double t1 = date_to_double(node_dates_[idx + 1]);
+    double w = (t - t0) / (t1 - t0);
+
+    double v0 = discount_factors_[idx];
+    double v1 = discount_factors_[idx + 1];
+
+    // Geometric interpolation (constant continuous rate between nodes)
+    return std::exp(std::log(v0) + w * (std::log(v1) - std::log(v0)));
+}
+
+double discount_curve::inst_fwd(const date_t& d) const
+{
+    constexpr double epsilon = 1e-4;
+    double df1 = df(d);
+    double df2 = df(date_to_double(d)+epsilon);
+
+    if (df1 <= 0.0 || df2 <= 0.0) 
+        throw std::domain_error("Discount factors must be positive.");
+    
+    // Assume ACT/365 convention
+    constexpr double dcf = epsilon / 365.0;
+    return (df1 / df2 - 1.0) / dcf;
+}
