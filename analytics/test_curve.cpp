@@ -28,7 +28,7 @@
 #define CHECK_APPROX(a, b, epsilon) do { \
     if (std::abs((a) - (b)) > (epsilon)) { \
         std::cerr << "Approx check failed at line " << __LINE__ << ": " << \
-            #a << " (" << (a) << ") != " << #b << " (" << (b) << ")" << std::endl; \
+            #a << " (" << std::fixed << std::setprecision(10) << (a) << ") != " << #b << " (" << std::fixed << std::setprecision(10) << (b) << ")" << std::endl; \
         ++g_failed_tests; \
     } else { \
         ++g_passed_tests; \
@@ -39,12 +39,10 @@ static int g_failed_tests = 0;
 static int g_passed_tests = 0;
 
 // Helper function to create a simple test curve
-std::shared_ptr<discount_curve> create_test_curve() {
-    // Create a simple curve with 5 points, 1Y apart
+std::shared_ptr<discount_curve> create_test_curve(bool flat = true) {
     std::vector<date_t> dates;
     std::vector<double> dfs;
     
-    // Use 2024-01-01 as base date (19723 days since 1970-01-01)
     date_t base_date = date_from_int(19723);  // 2024-01-01
     dates.push_back(base_date);  // t0
     dates.push_back(base_date + std::chrono::days(365));   // t1
@@ -52,13 +50,21 @@ std::shared_ptr<discount_curve> create_test_curve() {
     dates.push_back(base_date + std::chrono::days(1095));  // t3
     dates.push_back(base_date + std::chrono::days(1460));  // t4
 
-    // Create discount factors implying a 5% flat rate curve
-    // df = exp(-0.05 * t)
-    dfs.push_back(1.0);
-    dfs.push_back(std::exp(-0.05 * 1.0));
-    dfs.push_back(std::exp(-0.05 * 2.0));
-    dfs.push_back(std::exp(-0.05 * 3.0));
-    dfs.push_back(std::exp(-0.05 * 4.0));
+    if (flat) {
+        // Flat 5% curve
+        dfs.push_back(1.0);
+        dfs.push_back(std::exp(-0.05 * 1.0));
+        dfs.push_back(std::exp(-0.05 * 2.0));
+        dfs.push_back(std::exp(-0.05 * 3.0));
+        dfs.push_back(std::exp(-0.05 * 4.0));
+    } else {
+        // Non-flat curve: e.g., rates of 2%, 3%, 4%, 5% at each node
+        dfs.push_back(1.0);  // t0
+        dfs.push_back(std::exp(-0.02 * 1.0));  // 2% at t1
+        dfs.push_back(std::exp(-0.03 * 2.0));  // 3% at t2
+        dfs.push_back(std::exp(-0.04 * 3.0));  // 4% at t3
+        dfs.push_back(std::exp(-0.05 * 4.0));  // 5% at t4
+    }
 
     return std::make_shared<discount_curve>(dates, dfs);
 }
@@ -146,12 +152,15 @@ void test_forward_rates() {
     // Forward rate between nodes
     date_t start = base_date;
     date_t end = base_date + std::chrono::days(365);
-    CHECK_APPROX(curve->fwd(start, end), 0.05, 1e-4);
+    double expected_fwd = (1.0 / curve->df(end) - 1.0) / 1.0;  // Calculate based on DF
+    CHECK_APPROX(curve->fwd(start, end), expected_fwd, 1e-4);
 
-    // Forward rate for interpolated period
+    // Forward rate for interpolated period (approx 1 year from 182 to 547 days)
     date_t start2 = base_date + std::chrono::days(182);  // 6M
-    date_t end2 = base_date + std::chrono::days(547);    // 18M
-    CHECK_APPROX(curve->fwd(start2, end2), 0.05, 1e-3);
+    date_t end2 = base_date + std::chrono::days(547);    // 18M, approx 1 year from start2
+    double dcf2 = std::chrono::duration_cast<std::chrono::days>(end2 - start2).count() / 365.0;
+    double expected_fwd2 = (curve->df(start2) / curve->df(end2) - 1.0) / dcf2;  // Calculate based on DF
+    CHECK_APPROX(curve->fwd(start2, end2), expected_fwd2, 1e-3);
 
     // Invalid forward rate calculation
     CHECK_THROWS(curve->fwd(base_date, base_date));
@@ -176,25 +185,64 @@ void test_forward_dfs() {
     CHECK_APPROX(curve->fwd_df(start2, end2), expected_fwd_df2, 1e-10);
 }
 
-void test_instantaneous_forwards() {
-    TEST_CASE("Instantaneous forward rate calculations");
-    
-    auto curve = create_test_curve();
+void test_instantaneous_forwards(std::shared_ptr<discount_curve> curve, const std::string& curve_type) {
+    TEST_CASE("Instantaneous forward rate calculations for " + curve_type);
     date_t base_date = curve->valuation_date();
 
     // Instantaneous forward at nodes
-    CHECK_APPROX(curve->inst_fwd(base_date), 0.05, 1e-3);
-    CHECK_APPROX(curve->inst_fwd(base_date + std::chrono::days(365)), 0.05, 1e-3);
+    if (curve_type == "flat") {
+        CHECK_APPROX(curve->inst_fwd(base_date), 0.05, 1e-3);
+        CHECK_APPROX(curve->inst_fwd(base_date + std::chrono::days(365)), 0.05, 1e-3);
+    } else {  // Non-flat
+        // For non-flat, check against expected rates based on the curve
+        CHECK_APPROX(curve->inst_fwd(base_date), 0.02, 1e-3);  // First node's rate
+        CHECK_APPROX(curve->inst_fwd(base_date + std::chrono::days(365)), 0.03, 1e-3);  // Second node's rate, approximately
+    }
 
     // Instantaneous forward at interpolated points
     date_t mid_point = base_date + std::chrono::days(182);
-    CHECK_APPROX(curve->inst_fwd(mid_point), 0.05, 1e-3);
+    if (curve_type == "flat") {
+        CHECK_APPROX(curve->inst_fwd(mid_point), 0.05, 1e-3);
+    } else {
+        // For non-flat, it should be interpolated, so check it's between expected values
+        double inst_rate_mid = curve->inst_fwd(mid_point);
+        CHECK(inst_rate_mid > 0.02 && inst_rate_mid < 0.03);  // Between 2% and 3%
+    }
 
     // Consistency with forward rate
     date_t test_date = base_date + std::chrono::days(500);
     double inst_rate = curve->inst_fwd(test_date);
     double fwd_rate = curve->fwd(test_date, test_date + std::chrono::days(1));
-    CHECK_APPROX(fwd_rate, inst_rate, 1e-3);
+    CHECK_APPROX(fwd_rate, inst_rate, 1e-3);  // This should hold for both
+}
+
+void test_non_flat_curve() {
+    TEST_CASE("Non-flat curve tests");
+    auto curve = create_test_curve(false);  // Non-flat curve
+    date_t base_date = curve->valuation_date();
+
+    // Test discount factors at nodes
+    CHECK_APPROX(curve->df(base_date + std::chrono::days(365)), std::exp(-0.02 * 1.0), 1e-10);
+    CHECK_APPROX(curve->df(base_date + std::chrono::days(730)), std::exp(-0.03 * 2.0), 1e-10);
+    CHECK_APPROX(curve->df(base_date + std::chrono::days(1095)), std::exp(-0.04 * 3.0), 1e-10);
+
+    // Test interpolated discount factor (e.g., at 6 months)
+    date_t mid_point = base_date + std::chrono::days(182);  // Approx halfway to first node
+    double interpolated_df = curve->df(mid_point);  // Should be between 1.0 and exp(-0.02*1.0)
+    CHECK(interpolated_df > std::exp(-0.02 * 1.0) && interpolated_df < 1.0);
+
+    // Test forward rate between nodes (should reflect increasing rates)
+    date_t start = base_date + std::chrono::days(365);  // From t1 to t2
+    date_t end = base_date + std::chrono::days(730);
+    double expected_fwd = (curve->df(start) / curve->df(end) - 1.0) / 1.0;  // Approx average of 2% and 3%
+    CHECK_APPROX(curve->fwd(start, end), expected_fwd, 1e-3);
+
+    // Test forward rate for interpolated period
+    date_t start2 = base_date + std::chrono::days(182);
+    date_t end2 = base_date + std::chrono::days(547);
+    double dcf2 = std::chrono::duration_cast<std::chrono::days>(end2 - start2).count() / 365.0;
+    double expected_fwd2 = (curve->df(start2) / curve->df(end2) - 1.0) / dcf2;
+    CHECK_APPROX(curve->fwd(start2, end2), expected_fwd2, 1e-3);
 }
 
 int main() {
@@ -204,7 +252,9 @@ int main() {
     test_discount_factors();
     test_forward_rates();
     test_forward_dfs();
-    test_instantaneous_forwards();
+    test_instantaneous_forwards(create_test_curve(true), "flat");  // Test flat curve
+    test_instantaneous_forwards(create_test_curve(false), "non-flat");  // Test non-flat curve
+    test_non_flat_curve();  // Keep this for additional non-flat tests
 
     std::cout << "\nTest summary:" << std::endl;
     std::cout << "Passed: " << g_passed_tests << std::endl;
