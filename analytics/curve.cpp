@@ -108,13 +108,24 @@ double discount_curve::df(const double d) const
 double discount_curve::inst_fwd(const date_t& d) const
 {
     constexpr double epsilon = 1e-4;
-    double df1 = df(d);
-    double df2 = df(date_to_double(d)+epsilon);
+    double t = date_to_double(d);
 
-    if (df1 <= 0.0 || df2 <= 0.0) 
-        throw std::domain_error("Discount factors must be positive.");
-    
-    // Assume ACT/365 convention
-    constexpr double dcf = epsilon / 365.0;
-    return (df1 / df2 - 1.0) / dcf;
+    // If at or before the first node, use forward difference
+    if (d == node_dates_.front()) {
+        double df1 = df(t);
+        double df2 = df(t + epsilon);
+        LOG("df1=" << df1 << ", df2=" << df2);
+        if (df1 <= 0.0 || df2 <= 0.0)
+            throw std::domain_error("Discount factors must be positive.");
+        constexpr double dcf = epsilon / 365.0;
+        return (df1 / df2 - 1.0) / dcf;
+    } else {
+        // Central difference
+        double df_minus = df(t - epsilon);
+        double df_plus = df(t + epsilon);
+        if (df_minus <= 0.0 || df_plus <= 0.0)
+            throw std::domain_error("Discount factors must be positive.");
+        constexpr double dcf = 2 * epsilon / 365.0;
+        return (df_minus / df_plus - 1.0) / dcf;
+    }
 }

@@ -2,3 +2,4 @@ venv/
 _skbuild/
 dist/
 *.egg-info/
+_cmake_test_compile/

@@ -79,7 +79,8 @@ double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date,
         throw std::runtime_error("end_date must be after valuation_date");
 
     size_t num_steps = start_date - val_date;
-    double initial_rate = curve_->fwd(val_date, val_date + (end_date - start_date));
+    double initial_rate = curve_->inst_fwd(val_date);
+    //double initial_rate = curve_->fwd(val_date, val_date + (end_date - start_date));
     LOG("MC pricing: initial_rate=" << initial_rate);
 
     double sum_payoffs = 0.0;
@@ -95,7 +96,7 @@ double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date,
     for (int i = 1; i < num_paths; ++i) {
         r = initial_rate;
         for (size_t j = 0; j < num_steps; ++j)
-            r = evolve(val_date + j, r, 1 / 365);
+            r = evolve(val_date + j, r, 1.0 / 365.0 );
         sum_payoffs += std::max(r - strike, 0.0);
     }
 
