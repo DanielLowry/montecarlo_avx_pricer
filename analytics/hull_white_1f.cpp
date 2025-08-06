@@ -36,6 +36,7 @@ double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double
                                       double notional) const {
     // Simple Black-Scholes formula for an IR caplet
     double fwd = curve_->fwd(start_date, end_date);
+    LOG("Black pricing: fwd=" << fwd);
 
     // We don't yet handle negative rates
     if (fwd <= 0.0) {
@@ -43,7 +44,6 @@ double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double
     }
 
     double df = curve_->df(end_date);
-
     double T = (end_date - start_date) / 365.0;
 
     if (T <= 0.0 || sigma_ <= 0.0) {
@@ -55,17 +55,23 @@ double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double
     double stddev = sigma_ * std::sqrt(T);
     double d1 = (std::log(fwd / strike) + 0.5 * stddev * stddev) / stddev;
     double d2 = d1 - stddev;
+    LOG("Black pricing: d1=" << d1 << ", d2=" << d2);
 
     // Standard normal CDF
     auto norm_cdf = [](double x) { return 0.5 * std::erfc(-x / std::sqrt(2.0)); };
+    double n_d1 = norm_cdf(d1);
+    double n_d2 = norm_cdf(d2);
+    LOG("Black pricing: N(d1)=" << n_d1 << ", N(d2)=" << n_d2);
 
-    double caplet_price = df * notional * T * (fwd * norm_cdf(d1) - strike * norm_cdf(d2));
+    double caplet_price = df * notional * T * (fwd * n_d1 - strike * n_d2);
     return caplet_price;
 }
 
-double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date, double strike,
-                                            double notional, int num_paths) const {
-    double dcf = (end_date - start_date) / 365.0;  // start date only needed to calculate the DCF
+double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date,
+                                            double strike, double notional,
+                                            int num_paths) const {
+    double dcf =
+        (end_date - start_date) / 365.0;  // start date only needed to calculate the DCF
     double df = curve_->df(end_date);
 
     date_t val_date = curve_->valuation_date();
@@ -73,19 +79,29 @@ double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date, 
         throw std::runtime_error("end_date must be after valuation_date");
 
     size_t num_steps = end_date - val_date;
+    double initial_rate = curve_->fwd(val_date, val_date + (end_date - start_date));
+    LOG("MC pricing: initial_rate=" << initial_rate);
 
     double sum_payoffs = 0.0;
-    for (int i = 0; i < num_paths; ++i) {
-        // Run the monte carlo simulation
-        double r = curve_->fwd(val_date, val_date + (end_date - start_date));
-        for (size_t j = 0; j < num_steps; ++j)
-            r = evolve(val_date + j, r, 1/365);
+    // Log just the first path to see rate evolution
+    double r = initial_rate;
+    for (size_t j = 0; j < num_steps; ++j) {
+        r = evolve(val_date + j, r, 1.0 / 365.0);
+    }
+    LOG("MC pricing: first path final_rate=" << r
+                                             << ", payoff=" << std::max(r - strike, 0.0));
 
-        // Caplet payoff
+    // Run remaining paths
+    for (int i = 1; i < num_paths; ++i) {
+        r = initial_rate;
+        for (size_t j = 0; j < num_steps; ++j)
+            r = evolve(val_date + j, r, 1 / 365);
         sum_payoffs += std::max(r - strike, 0.0);
     }
 
-    return df * dcf * notional * sum_payoffs / num_paths;
+    double avg_payoff = sum_payoffs / num_paths;
+    LOG("MC pricing: avg_payoff=" << avg_payoff);
+    return df * dcf * notional * avg_payoff;
 }
 
 double hull_white_1f::evolve(date_t ti,        // Current time
@@ -98,16 +114,19 @@ double hull_white_1f::evolve(date_t ti,        // Current time
     // We calculate dfwd(0,t)/dt by finite difference
     constexpr double epsilon = 1;  // for finite difference
     double dfwd_dt =
-        (curve_->fwd(ti + epsilon, ti + 2 * epsilon) - curve_->fwd(ti, ti + epsilon)) / epsilon;
+        (curve_->fwd(ti + epsilon, ti + 2 * epsilon) - curve_->fwd(ti, ti + epsilon)) /
+        epsilon;
     double theta = dfwd_dt + a_ * curve_->fwd(ti, ti + epsilon) +
-                   sigma_ * sigma_ / (2.0 * a_) * (1.0 - std::exp(-2.0 * a_ * date_to_double(ti)));
+                   sigma_ * sigma_ / (2.0 * a_) *
+                       (1.0 - std::exp(-2.0 * a_ * date_to_double(ti) / 365.0));
 
     // Standard 1F hull white
     double rn = random_normal();
     return ri + (theta - a_ * ri) * dt + sigma_ * std::sqrt(dt) * rn;
 }
 
-double hull_white_1f::black_vol_to_hw_vol(double black_vol, double a, double dcf, double T) {
+double hull_white_1f::black_vol_to_hw_vol(double black_vol, double a, double dcf,
+                                          double T) {
     return black_vol * std::sqrt((2 * a * T) / (1 - std::exp(-2 * a * T))) * (a * dcf) /
            (1 - std::exp(-a * dcf));
 }
