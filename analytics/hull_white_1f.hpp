@@ -61,9 +61,10 @@ class hull_white_1f {
     // - t: time in years from valuation date to the evaluation time
     // - T: time in years from valuation date to maturity
     double hw_B(double t, double T) const;
+    
     // - t_date: date corresponding to time t
     // - T_date: maturity date
-    double hw_A(double t, date_t t_date, date_t T_date) const;
+    double hw_a(double t, date_t t_date, date_t maturity_date) const;
 
     // Struct holding pathwise info up to a given target date
     struct short_rate_path_info {

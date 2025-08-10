@@ -114,17 +114,17 @@ double hull_white_1f::hw_B(double t, double T) const {
     return (1.0 - std::exp(-x)) / a_;
 }
 
-double hull_white_1f::hw_A(double t, date_t t_date, date_t T_date) const {
+double hull_white_1f::hw_a(double t, date_t t_date, date_t maturity_date) const {
     const date_t val_date = curve_->valuation_date();
-    const double P0t = curve_->df(t_date);
-    const double P0T = curve_->df(T_date);
+    const double p0_t = curve_->df(t_date);
+    const double p0_maturity = curve_->df(maturity_date);
     const double f0t = curve_->inst_fwd(t_date);
-    const double b = hw_B(t, (T_date - val_date) / 365.0);
+    const double b = hw_B(t, (maturity_date - val_date) / 365.0);
     // Var-term in A(t,T) contains an integral over B(s,T)^2 from 0..t
     // For HW with constant a and sigma: \int_0^t B(s,T)^2 ds = (b^2) * (1 - e^{-2 a t}) / (2 a)
     // leading to (sigma^2 / 2) * \int_0^t B(s,T)^2 ds = (sigma^2 / (4 a)) * (1 - e^{-2 a t}) * b^2
     const double variance_term = (sigma_ * sigma_) / (4.0 * a_) * (1.0 - std::exp(-2.0 * a_ * t)) * (b * b);
-    return (P0T / P0t) * std::exp(b * f0t - variance_term);
+    return (p0_maturity / p0_t) * std::exp(b * f0t - variance_term);
 }
 
 // New struct methods and replacements
@@ -141,13 +141,27 @@ auto hull_white_1f::simulate_short_rate_to(date_t target_date, double r0, double
     return short_rate_path_info{val_date, target_date, r, integral, *this};
 }
 
+// Convert the pathwise short rate information at start_date (S) into the
+// simple-compounded forward LIBOR L(S,E) for the period [S, E].
+// Rationale:
+//   Under HW1F, the zero-coupon bond price at S for maturity E is
+//     P(S,E) = A(S,E) * exp(-B(S,E) * r(S)).
+//   Given the path's short rate r(S), we compute P(S,E), then convert the
+//   discount factor to the simple forward via L(S,E) = (1/P(S,E) - 1) / dcf.
 double hull_white_1f::short_rate_path_info::libor(date_t end_date) const {
+    // Times in years from valuation date (t=0)
     const double t_start = (start_date - valuation_date) / 365.0;
     const double t_end = (end_date - valuation_date) / 365.0;
-    const double dcf = (end_date - start_date) / 365.0;
-    const double b = model.hw_B(t_start, t_end);
-    const double a_term = model.hw_A(t_start, start_date, end_date);
+    const double dcf = (end_date - start_date) / 365.0;  // accrual year fraction [S,E]
+
+    // HW1F bond pricing coefficients evaluated at S for maturity E
+    const double b = model.hw_B(t_start, t_end);                 // B(S,E)
+    const double a_term = model.hw_a(t_start, start_date, end_date);  // A(S,E)
+
+    // Pathwise discount factor P(S,E)
     const double p_start_end = a_term * std::exp(-b * r_at_start);
+
+    // Simple-compounded forward from P(S,E)
     return (1.0 / p_start_end - 1.0) / dcf;
 }
 
