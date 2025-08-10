@@ -109,7 +109,6 @@ double discount_curve::inst_fwd(const date_t& d) const
 {
     constexpr double epsilon = 1e-4;
     double t = date_to_double(d);
-    double t = date_to_double(d);
 
     // If at or before the first node, use forward difference
     if (d == node_dates_.front()) {

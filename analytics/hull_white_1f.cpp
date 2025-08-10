@@ -70,39 +70,85 @@ double hull_white_1f::price_cap_black(date_t start_date, date_t end_date, double
 double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date,
                                             double strike, double notional,
                                             int num_paths) const {
-    double dcf =
-        (end_date - start_date) / 365.0;  // start date only needed to calculate the DCF
-    double df = curve_->df(end_date);
+    // Accrual factor for the caplet period [start_date, end_date]
+    const double dcf = (end_date - start_date) / 365.0;
 
-    date_t val_date = curve_->valuation_date();
-    if (end_date <= val_date)
+    // Valuation date (t=0)
+    const date_t val_date = curve_->valuation_date();
+    if (end_date <= val_date) {
         throw std::runtime_error("end_date must be after valuation_date");
+    }
 
-    size_t num_steps = start_date - val_date;
-    double initial_rate = curve_->inst_fwd(val_date);
-    //double initial_rate = curve_->fwd(val_date, val_date + (end_date - start_date));
-    LOG("MC pricing: initial_rate=" << initial_rate);
+    // Number of Euler steps (1 day granularity)
+    const size_t num_steps = start_date - val_date;
+    const double dt = 1.0 / 365.0;
 
-    double sum_payoffs = 0.0;
-    // Log just the first path to see rate evolution
-    double r = initial_rate;
+    // Initial short rate approximation from the curve
+    const double r0 = curve_->inst_fwd(val_date);
+    LOG("MC pricing: initial_rate=" << r0);
+
+    double sum_discounted_payoffs = 0.0;
+
+    for (int i = 0; i < num_paths; ++i) {
+        short_rate_path_info path = simulate_short_rate_to(start_date, r0, dt);
+
+        const double libor = path.libor(end_date);
+        const double payoff_at_start = std::max(libor - strike, 0.0) * dcf * notional;
+        const double discount_0_to_start = path.discount_0_to_start();
+        sum_discounted_payoffs += discount_0_to_start * payoff_at_start;
+
+        if (i == 0) {
+            LOG("MC pricing: first path r_start=" << path.r_at_start << ", L=" << libor
+                << ", payoff_start=" << payoff_at_start
+                << ", disc(0,start)=" << discount_0_to_start);
+        }
+    }
+
+    const double price = sum_discounted_payoffs / static_cast<double>(num_paths);
+    LOG("MC pricing: avg discounted payoff=" << price);
+    return price;
+}
+
+double hull_white_1f::hw_B(double t, double T) const {
+    const double x = a_ * (T - t);
+    return (1.0 - std::exp(-x)) / a_;
+}
+
+double hull_white_1f::hw_A(double t, date_t t_date, date_t T_date) const {
+    const date_t val_date = curve_->valuation_date();
+    const double P0t = curve_->df(t_date);
+    const double P0T = curve_->df(T_date);
+    const double f0t = curve_->inst_fwd(t_date);
+    const double b = hw_B(t, (T_date - val_date) / 365.0);
+    // Var-term in A(t,T) contains an integral over B(s,T)^2 from 0..t
+    // For HW with constant a and sigma: \int_0^t B(s,T)^2 ds = (b^2) * (1 - e^{-2 a t}) / (2 a)
+    // leading to (sigma^2 / 2) * \int_0^t B(s,T)^2 ds = (sigma^2 / (4 a)) * (1 - e^{-2 a t}) * b^2
+    const double variance_term = (sigma_ * sigma_) / (4.0 * a_) * (1.0 - std::exp(-2.0 * a_ * t)) * (b * b);
+    return (P0T / P0t) * std::exp(b * f0t - variance_term);
+}
+
+// New struct methods and replacements
+auto hull_white_1f::simulate_short_rate_to(date_t target_date, double r0, double dt) const
+    -> short_rate_path_info {
+    const date_t val_date = curve_->valuation_date();
+    const size_t num_steps = target_date - val_date;
+    double r = r0;
+    double integral = 0.0;
     for (size_t j = 0; j < num_steps; ++j) {
-        r = evolve(val_date + j, r, 1.0 / 365.0);
+        integral += r * dt;
+        r = evolve(val_date + j, r, dt);
     }
-    LOG("MC pricing: first path final_rate=" << r
-                                             << ", payoff=" << std::max(r - strike, 0.0));
+    return short_rate_path_info{val_date, target_date, r, integral, *this};
+}
 
-    // Run remaining paths
-    for (int i = 1; i < num_paths; ++i) {
-        r = initial_rate;
-        for (size_t j = 0; j < num_steps; ++j)
-            r = evolve(val_date + j, r, 1.0 / 365.0 );
-        sum_payoffs += std::max(r - strike, 0.0);
-    }
-
-    double avg_payoff = sum_payoffs / num_paths;
-    LOG("MC pricing: avg_payoff=" << avg_payoff);
-    return df * dcf * notional * avg_payoff;
+double hull_white_1f::short_rate_path_info::libor(date_t end_date) const {
+    const double t_start = (start_date - valuation_date) / 365.0;
+    const double t_end = (end_date - valuation_date) / 365.0;
+    const double dcf = (end_date - start_date) / 365.0;
+    const double b = model.hw_B(t_start, t_end);
+    const double a_term = model.hw_A(t_start, start_date, end_date);
+    const double p_start_end = a_term * std::exp(-b * r_at_start);
+    return (1.0 / p_start_end - 1.0) / dcf;
 }
 
 double hull_white_1f::evolve(date_t ti,        // Current time
