@@ -110,9 +110,10 @@ double hull_white_1f::price_cap_monte_carlo(date_t start_date, date_t end_date,
         total_discounted_payoffs += discount_to_end * payoff_at_start;
 
         if (i == 0) {
-            LOG("MC pricing: first path r_start="
-                << path.r_at_start << ", L=" << libor_rate << ", payoff_start="
-                << payoff_at_start << ", disc(0,end)=" << discount_to_end);
+            LOG("MC pricing: first path r_start=" << path.r_at_start
+                                                  << ", L=" << libor_rate
+                                                  << ", payoff_start=" << payoff_at_start
+                                                  << ", disc(0,end)=" << discount_to_end);
         }
     }
 
